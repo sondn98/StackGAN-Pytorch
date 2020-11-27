@@ -8,20 +8,21 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
 import os
+from tqdm import tqdm
 import time
 
 import numpy as np
 import torchfile
 
-from miscc.config import cfg
-from miscc.utils import mkdir_p
-from miscc.utils import weights_init
-from miscc.utils import save_img_results, save_model
-from miscc.utils import KL_loss
-from miscc.utils import compute_discriminator_loss, compute_generator_loss
+from src.miscc.config import cfg
+from src.miscc.utils import mkdir_p
+from src.miscc.utils import weights_init
+from src.miscc.utils import save_img_results, save_model
+from src.miscc.utils import KL_loss
+from src.miscc.utils import compute_discriminator_loss, compute_generator_loss
 
-from tensorboard import summary
-from tensorboard import FileWriter
+from tensorboardX import summary
+from tensorboardX import FileWriter
 
 
 class GANTrainer(object):
@@ -47,7 +48,7 @@ class GANTrainer(object):
 
     # ############# For training stageI GAN #############
     def load_network_stageI(self):
-        from model import STAGE1_G, STAGE1_D
+        from src.model import STAGE1_G, STAGE1_D
         netG = STAGE1_G()
         netG.apply(weights_init)
         print(netG)
@@ -74,7 +75,7 @@ class GANTrainer(object):
 
     # ############# For training stageII GAN  #############
     def load_network_stageII(self):
-        from model import STAGE1_G, STAGE2_G, STAGE2_D
+        from src.model import STAGE1_G, STAGE2_G, STAGE2_D
 
         Stage1_G = STAGE1_G()
         netG = STAGE2_G(Stage1_G)
@@ -153,7 +154,7 @@ class GANTrainer(object):
                 for param_group in optimizerD.param_groups:
                     param_group['lr'] = discriminator_lr
 
-            for i, data in enumerate(data_loader, 0):
+            for i, data in tqdm(enumerate(data_loader, 0)):
                 ######################################################
                 # (1) Prepare training data
                 ######################################################
@@ -195,12 +196,12 @@ class GANTrainer(object):
 
                 count = count + 1
                 if i % 100 == 0:
-                    summary_D = summary.scalar('D_loss', errD.data[0])
+                    summary_D = summary.scalar('D_loss', errD.data)
                     summary_D_r = summary.scalar('D_loss_real', errD_real)
                     summary_D_w = summary.scalar('D_loss_wrong', errD_wrong)
                     summary_D_f = summary.scalar('D_loss_fake', errD_fake)
-                    summary_G = summary.scalar('G_loss', errG.data[0])
-                    summary_KL = summary.scalar('KL_loss', kl_loss.data[0])
+                    summary_G = summary.scalar('G_loss', errG.data)
+                    summary_KL = summary.scalar('KL_loss', kl_loss.data)
 
                     self.summary_writer.add_summary(summary_D, count)
                     self.summary_writer.add_summary(summary_D_r, count)
@@ -222,7 +223,7 @@ class GANTrainer(object):
                      Total Time: %.2fsec
                   '''
                   % (epoch, self.max_epoch, i, len(data_loader),
-                     errD.data[0], errG.data[0], kl_loss.data[0],
+                     errD.data, errG.data, kl_loss.data,
                      errD_real, errD_wrong, errD_fake, (end_t - start_t)))
             if epoch % self.snapshot_interval == 0:
                 save_model(netG, netD, epoch, self.model_dir)

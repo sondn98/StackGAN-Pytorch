@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.parallel
-from miscc.config import cfg
+from src.miscc.config import cfg
 from torch.autograd import Variable
 
 
@@ -41,7 +41,7 @@ class ResBlock(nn.Module):
 
 
 class CA_NET(nn.Module):
-    # some code is modified from vae examples
+    # some src is modified from vae examples
     # (https://github.com/pytorch/examples/blob/master/vae/main.py)
     def __init__(self):
         super(CA_NET, self).__init__()
@@ -236,7 +236,7 @@ class STAGE2_G(nn.Module):
         self.upsample4 = upBlock(ngf // 2, ngf // 4)
         # --> 3 x 256 x 256
         self.img = nn.Sequential(
-            conv3x3(ngf // 4, 3),
+            conv3x3(ngf // 2, 3),
             nn.Tanh())
 
     def forward(self, text_embedding, noise):
@@ -254,7 +254,7 @@ class STAGE2_G(nn.Module):
         h_code = self.upsample1(h_code)
         h_code = self.upsample2(h_code)
         h_code = self.upsample3(h_code)
-        h_code = self.upsample4(h_code)
+        # h_code = self.upsample4(h_code)
 
         fake_img = self.img(h_code)
         return stage1_img, fake_img, mu, logvar
@@ -272,27 +272,34 @@ class STAGE2_D(nn.Module):
         self.encode_img = nn.Sequential(
             nn.Conv2d(3, ndf, 4, 2, 1, bias=False),  # 128 * 128 * ndf
             nn.LeakyReLU(0.2, inplace=True),
+
             nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ndf * 2),
             nn.LeakyReLU(0.2, inplace=True),  # 64 * 64 * ndf * 2
+
             nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ndf * 4),
             nn.LeakyReLU(0.2, inplace=True),  # 32 * 32 * ndf * 4
+
             nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ndf * 8),
             nn.LeakyReLU(0.2, inplace=True),  # 16 * 16 * ndf * 8
+
             nn.Conv2d(ndf * 8, ndf * 16, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ndf * 16),
             nn.LeakyReLU(0.2, inplace=True),  # 8 * 8 * ndf * 16
-            nn.Conv2d(ndf * 16, ndf * 32, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 32),
-            nn.LeakyReLU(0.2, inplace=True),  # 4 * 4 * ndf * 32
-            conv3x3(ndf * 32, ndf * 16),
-            nn.BatchNorm2d(ndf * 16),
-            nn.LeakyReLU(0.2, inplace=True),   # 4 * 4 * ndf * 16
+
+            # nn.Conv2d(ndf * 16, ndf * 32, 4, 2, 1, bias=False),
+            # nn.BatchNorm2d(ndf * 32),
+            # nn.LeakyReLU(0.2, inplace=True),  # 4 * 4 * ndf * 32
+
             conv3x3(ndf * 16, ndf * 8),
             nn.BatchNorm2d(ndf * 8),
-            nn.LeakyReLU(0.2, inplace=True)   # 4 * 4 * ndf * 8
+            nn.LeakyReLU(0.2, inplace=True),   # 4 * 4 * ndf * 16
+
+            # conv3x3(ndf * 16, ndf * 8),
+            # nn.BatchNorm2d(ndf * 8),
+            # nn.LeakyReLU(0.2, inplace=True)   # 4 * 4 * ndf * 8
         )
 
         self.get_cond_logits = D_GET_LOGITS(ndf, nef, bcondition=True)

@@ -16,19 +16,21 @@ import dateutil.tz
 dir_path = (os.path.abspath(os.path.join(os.path.realpath(__file__), './.')))
 sys.path.append(dir_path)
 
-from miscc.datasets import TextDataset
-from miscc.config import cfg, cfg_from_file
-from miscc.utils import mkdir_p
-from trainer import GANTrainer
+from src.miscc.datasets import TextDataset
+from src.miscc.config import cfg, cfg_from_file
+from src.miscc.utils import mkdir_p
+from src.trainer import GANTrainer
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a GAN network')
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
-                        default='birds_stage1.yml', type=str)
-    parser.add_argument('--gpu',  dest='gpu_id', type=str, default='0')
-    parser.add_argument('--data_dir', dest='data_dir', type=str, default='')
+                        default='cfg/vn-celeb_s1.yml', type=str)
+    parser.add_argument('--gpu',  dest='gpu_id',
+                        type=str, default='0')
+    parser.add_argument('--data_dir', dest='data_dir',
+                        type=str, default='')
     parser.add_argument('--manualSeed', type=int, help='manual seed')
     args = parser.parse_args()
     return args
