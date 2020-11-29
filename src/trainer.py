@@ -232,7 +232,101 @@ class GANTrainer(object):
         #
         self.summary_writer.close()
 
-    def sample(self, datapath, stage=1):
+    # def sample(self, datapath, stage=1):
+    #     if stage == 1:
+    #         netG, _ = self.load_network_stageI()
+    #     else:
+    #         netG, _ = self.load_network_stageII()
+    #     netG.eval()
+    #
+    #     # Load text embeddings generated from the encoder
+    #     t_file = torchfile.load(datapath)
+    #     captions_list = t_file.raw_txt
+    #     embeddings = np.concatenate(t_file.fea_txt, axis=0)
+    #     num_embeddings = len(captions_list)
+    #     print('Successfully load sentences from: ', datapath)
+    #     print('Total number of sentences:', num_embeddings)
+    #     print('num_embeddings:', num_embeddings, embeddings.shape)
+    #     # path to save generated samples
+    #     save_dir = cfg.NET_G[:cfg.NET_G.find('.pth')]
+    #     mkdir_p(save_dir)
+    #
+    #     batch_size = np.minimum(num_embeddings, self.batch_size)
+    #     nz = cfg.Z_DIM
+    #     noise = Variable(torch.FloatTensor(batch_size, nz))
+    #     if cfg.CUDA:
+    #         noise = noise.cuda()
+    #     count = 0
+    #     while count < num_embeddings:
+    #         if count > 3000:
+    #             break
+    #         iend = count + batch_size
+    #         if iend > num_embeddings:
+    #             iend = num_embeddings
+    #             count = num_embeddings - batch_size
+    #         embeddings_batch = embeddings[count:iend]
+    #         # captions_batch = captions_list[count:iend]
+    #         txt_embedding = Variable(torch.FloatTensor(embeddings_batch))
+    #         if cfg.CUDA:
+    #             txt_embedding = txt_embedding.cuda()
+    #
+    #         #######################################################
+    #         # (2) Generate fake images
+    #         ######################################################
+    #         noise.data.normal_(0, 1)
+    #         inputs = (txt_embedding, noise)
+    #         _, fake_imgs, mu, logvar = \
+    #             nn.parallel.data_parallel(netG, inputs, self.gpus)
+    #         for i in range(batch_size):
+    #             save_name = '%s/%d.png' % (save_dir, count + i)
+    #             im = fake_imgs[i].data.cpu().numpy()
+    #             im = (im + 1.0) * 127.5
+    #             im = im.astype(np.uint8)
+    #             # print('im', im.shape)
+    #             im = np.transpose(im, (1, 2, 0))
+    #             # print('im', im.shape)
+    #             im = Image.fromarray(im)
+    #             im.save(save_name)
+    #         count += batch_size
+
+    def sample_one(self, desc, samples=10, save_dir=None, truncate_dir=True):
+        netG, _ = self.load_network_stageII()
+        netG.eval()
+
+        # Load text embeddings generated from the encoder
+        from src.text_embedding import TextEmbedding
+        embedding = TextEmbedding()
+        embedded = [embedding.embed_single_text(desc, tokenized=False)]
+        # path to save generated samples
+        save_dir = cfg.NET_G[:cfg.NET_G.find('.pth')] if save_dir is None else save_dir
+        if os.path.exists(save_dir) and truncate_dir:
+            os.remove(save_dir)
+        mkdir_p(save_dir)
+        nz = cfg.Z_DIM
+        noise = Variable(torch.FloatTensor(1, nz))
+        if cfg.CUDA:
+            noise = noise.cuda()
+
+        txt_embedding = Variable(torch.FloatTensor(embedded))
+        if cfg.CUDA:
+            txt_embedding = txt_embedding.cuda()
+        fake_imgs = []
+        for i in range(samples):
+            noise.data.normal_(0, 1)
+            inputs = (txt_embedding, noise)
+            _, fake_img, mu, logvar = \
+                nn.parallel.data_parallel(netG, inputs, self.gpus)
+            fake_imgs.append(fake_img)
+        for idx, img in enumerate(fake_imgs):
+            save_name = '%s/%d.png' % (save_dir, idx)
+            im = img.data.cpu().numpy()
+            im = (im + 1.0) * 127.5
+            im = im.astype(np.uint8)
+            im = np.transpose(im, (1, 2, 0))
+            im = Image.fromarray(im)
+            im.save(save_name)
+
+    def sample(self, datapath, stage=1, save_dir=None):
         if stage == 1:
             netG, _ = self.load_network_stageI()
         else:
@@ -240,15 +334,19 @@ class GANTrainer(object):
         netG.eval()
 
         # Load text embeddings generated from the encoder
-        t_file = torchfile.load(datapath)
-        captions_list = t_file.raw_txt
-        embeddings = np.concatenate(t_file.fea_txt, axis=0)
-        num_embeddings = len(captions_list)
+        # t_file = torchfile.load(datapath)
+        # captions_list = t_file.raw_txt
+        import pickle
+        with open(datapath, 'rb') as handle:
+            t_file = pickle.load(handle)
+        t_file = [[r] for r in t_file][:2200]
+        embeddings = np.concatenate(t_file, axis=0)
+        num_embeddings = len(t_file)
         print('Successfully load sentences from: ', datapath)
         print('Total number of sentences:', num_embeddings)
         print('num_embeddings:', num_embeddings, embeddings.shape)
         # path to save generated samples
-        save_dir = cfg.NET_G[:cfg.NET_G.find('.pth')]
+        save_dir = cfg.NET_G[:cfg.NET_G.find('.pth')] if save_dir is None else save_dir
         mkdir_p(save_dir)
 
         batch_size = np.minimum(num_embeddings, self.batch_size)
@@ -288,4 +386,3 @@ class GANTrainer(object):
                 im = Image.fromarray(im)
                 im.save(save_name)
             count += batch_size
-

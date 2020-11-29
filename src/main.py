@@ -26,7 +26,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train a GAN network')
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
-                        default='cfg/vn-celeb_s1.yml', type=str)
+                        default='cfg/vn-celeb_eval.yml', type=str)
     parser.add_argument('--gpu',  dest='gpu_id',
                         type=str, default='0')
     parser.add_argument('--data_dir', dest='data_dir',
@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument('--manualSeed', type=int, help='manual seed')
     args = parser.parse_args()
     return args
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -74,6 +75,6 @@ if __name__ == "__main__":
         algo = GANTrainer(output_dir)
         algo.train(dataloader, cfg.STAGE)
     else:
-        datapath= '%s/test/val_captions.t7' % (cfg.DATA_DIR)
+        datapath= '%s/test/embedding.pkl' % (cfg.DATA_DIR)
         algo = GANTrainer(output_dir)
         algo.sample(datapath, cfg.STAGE)
