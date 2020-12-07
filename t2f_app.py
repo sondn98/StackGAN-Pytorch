@@ -5,16 +5,18 @@ from os import listdir
 
 from src.trainer import GANTrainer
 from src.miscc.config import cfg
+from src.miscc.config import cfg, cfg_from_file
 
 MODEL_FILE = '/home/sondn/DIY/StackGAN-Pytorch/output/res/step2.pth'
-IMGS_DIR = '/home/sondn/DIY/StackGAN-Pytorch/output/res/step2'
+IMGS_DIR = '/home/sondn/DIY/StackGAN-Pytorch/output/images'
+cfg_from_file('src/cfg/vn-celeb_eval.yml')
 
 st.title('Text-to-face app')
 desc = st.text_area('Type your face description here')
 ok = st.button('OK')
 if ok:
     algo = GANTrainer('')
-    algo.sample_one(desc=desc, samples=50, save_dir=IMGS_DIR, truncate_dir=True)
+    algo.sample_one(desc=desc, samples=25, save_dir=IMGS_DIR, truncate_dir=True)
 
 columns = st.beta_columns(5)
 next = st.button('Next')

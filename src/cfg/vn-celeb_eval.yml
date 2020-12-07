@@ -1,16 +1,17 @@
 CONFIG_NAME: 'stageII'
 
 DATASET_NAME: 'vn-celeb'
+#STAGE1_G: 'output/res/step1.pth'
 GPU_ID: '0'
 Z_DIM: 100
-NET_G: '../output/res/step2.pth'
+NET_G: 'output/res/step2.pth'
 DATA_DIR: '/usr/local/data/images/faces/Processed-VN_Celeb'
 WORKERS: 4
-IMSIZE: 256
+IMSIZE: 128
 STAGE: 2
 TRAIN:
     FLAG: False
-    BATCH_SIZE: 8
+    BATCH_SIZE: 25
 
 GAN:
     CONDITION_DIM: 128

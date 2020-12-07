@@ -81,11 +81,12 @@ class GANTrainer(object):
         netG = STAGE2_G(Stage1_G)
         netG.apply(weights_init)
         print(netG)
+        # print(cfg.NET_G)
         if cfg.NET_G != '':
             state_dict = \
                 torch.load(cfg.NET_G,
                            map_location=lambda storage, loc: storage)
-            netG.load_state_dict(state_dict)
+            netG.load_state_dict(state_dict, strict=False)
             print('Load from: ', cfg.NET_G)
         elif cfg.STAGE1_G != '':
             state_dict = \
@@ -296,35 +297,39 @@ class GANTrainer(object):
         # Load text embeddings generated from the encoder
         from src.text_embedding import TextEmbedding
         embedding = TextEmbedding()
+        print('=================================')
         embedded = [embedding.embed_single_text(desc, tokenized=False)]
         # path to save generated samples
         save_dir = cfg.NET_G[:cfg.NET_G.find('.pth')] if save_dir is None else save_dir
-        if os.path.exists(save_dir) and truncate_dir:
-            os.remove(save_dir)
-        mkdir_p(save_dir)
+        # if os.path.exists(save_dir) and truncate_dir:
+        #     os.remove(save_dir)
+        # mkdir_p(save_dir)
         nz = cfg.Z_DIM
         noise = Variable(torch.FloatTensor(1, nz))
         if cfg.CUDA:
             noise = noise.cuda()
+        print('================2=================')
 
         txt_embedding = Variable(torch.FloatTensor(embedded))
         if cfg.CUDA:
             txt_embedding = txt_embedding.cuda()
         fake_imgs = []
+        print('================3=================')
         for i in range(samples):
             noise.data.normal_(0, 1)
             inputs = (txt_embedding, noise)
             _, fake_img, mu, logvar = \
                 nn.parallel.data_parallel(netG, inputs, self.gpus)
             fake_imgs.append(fake_img)
-        for idx, img in enumerate(fake_imgs):
-            save_name = '%s/%d.png' % (save_dir, idx)
-            im = img.data.cpu().numpy()
-            im = (im + 1.0) * 127.5
-            im = im.astype(np.uint8)
-            im = np.transpose(im, (1, 2, 0))
-            im = Image.fromarray(im)
-            im.save(save_name)
+        for b_idx, batch in enumerate(fake_imgs):
+            for idx, img in enumerate(batch):
+                save_name = '%s/%d_%d.png' % (save_dir, b_idx, idx)
+                im = img.data.cpu().numpy()
+                im = (im + 1.0) * 127.5
+                im = im.astype(np.uint8)
+                im = np.transpose(im, (1, 2, 0))
+                im = Image.fromarray(im)
+                im.save(save_name)
 
     def sample(self, datapath, stage=1, save_dir=None):
         if stage == 1:

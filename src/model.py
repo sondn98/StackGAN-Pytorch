@@ -142,10 +142,15 @@ class STAGE1_G(nn.Module):
         z_c_code = torch.cat((noise, c_code), 1)
         h_code = self.fc(z_c_code)
 
+        # 1536 x 4 x 4
         h_code = h_code.view(-1, self.gf_dim, 4, 4)
+        # 768 x 8 x 8
         h_code = self.upsample1(h_code)
+        # 384 x 16 x 16
         h_code = self.upsample2(h_code)
+        # 192 x 32 x 32
         h_code = self.upsample3(h_code)
+        # 96 x 64 x 64
         h_code = self.upsample4(h_code)
         # state size 3 x 64 x 64
         fake_img = self.img(h_code)
@@ -221,6 +226,19 @@ class STAGE2_G(nn.Module):
             nn.Conv2d(ngf * 2, ngf * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ngf * 4),
             nn.ReLU(True))
+
+        # self.encoder1 = nn.Sequential(
+        #     conv3x3(3, ngf),
+        #     nn.ReLU(True))
+        # self.encoder2 = nn.Sequential(
+        #     nn.Conv2d(ngf, ngf * 2, 4, 2, 1, bias=False),
+        #     nn.BatchNorm2d(ngf * 2),
+        #     nn.ReLU(True),)
+        # self.encoder3 = nn.Sequential(
+        #     nn.Conv2d(ngf * 2, ngf * 4, 4, 2, 1, bias=False),
+        #     nn.BatchNorm2d(ngf * 4),
+        #     nn.ReLU(True))
+
         self.hr_joint = nn.Sequential(
             conv3x3(self.ef_dim + ngf * 4, ngf * 4),
             nn.BatchNorm2d(ngf * 4),
@@ -240,23 +258,45 @@ class STAGE2_G(nn.Module):
             nn.Tanh())
 
     def forward(self, text_embedding, noise):
+        # print('============================================')
         _, stage1_img, _, _ = self.STAGE1_G(text_embedding, noise)
         stage1_img = stage1_img.detach()
+        # print('Fake image shape: ', stage1_img.shape)
         encoded_img = self.encoder(stage1_img)
+        # print('Encoded shape 1: ', encoded_img.shape)
+        # encoded_img = self.encoder2(encoded_img)
+        # print('Encoded shape 2: ', encoded_img.shape)
+        # encoded_img = self.encoder3(encoded_img)
+        # print('Encoded shape 3: ', encoded_img.shape)
+        # print('Encoded image shape: ', encoded_img.shape)
 
         c_code, mu, logvar = self.ca_net(text_embedding)
+        # print('c_code shape: ', c_code.shape)
+        # print('mu shape: ', mu.shape)
+        # print('logvar shape: ', logvar.shape)
+
         c_code = c_code.view(-1, self.ef_dim, 1, 1)
+        # print('c_code shape v2: ', c_code.shape)
         c_code = c_code.repeat(1, 1, 16, 16)
+        # print('c_code shape v3: ', c_code.shape)
         i_c_code = torch.cat([encoded_img, c_code], 1)
+        # print('i_c_code shape: ', i_c_code.shape)
         h_code = self.hr_joint(i_c_code)
+        # print('h_code shape: ', h_code.shape)
         h_code = self.residual(h_code)
+        # print('h_code shape: ', h_code.shape)
 
         h_code = self.upsample1(h_code)
+        # print('h_code shape: ', h_code.shape)
         h_code = self.upsample2(h_code)
+        # print('h_code shape: ', h_code.shape)
         h_code = self.upsample3(h_code)
+        # print('h_code shape: ', h_code.shape)
         # h_code = self.upsample4(h_code)
 
         fake_img = self.img(h_code)
+        # print('fake image shape: ', fake_img.shape)
+        # print('============================================')
         return stage1_img, fake_img, mu, logvar
 
 

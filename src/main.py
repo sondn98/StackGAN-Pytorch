@@ -76,5 +76,5 @@ if __name__ == "__main__":
         algo.train(dataloader, cfg.STAGE)
     else:
         datapath= '%s/test/embedding.pkl' % (cfg.DATA_DIR)
-        algo = GANTrainer(output_dir)
-        algo.sample(datapath, cfg.STAGE)
+        algo = GANTrainer('../output/log')
+        algo.sample(datapath, cfg.STAGE, save_dir='../output/images')
